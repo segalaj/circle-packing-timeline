@@ -158,8 +158,9 @@ d3.circlePackingTimeline = function (json, width, height, containerSelector, col
         /**
          * Footer
          */
-        container.append('a').attr('xlink:href', root.url).attr('target', '_blank').attr('class', 'footer')
-            .append('text').attr('y', 2 * height / 5).text('By me!');
+        container.append('a').attr('xlink:href', 'https://github.com/segalaj/circle-packing-timeline')
+            .attr('target', '_blank').attr('class', 'footer')
+            .append('text').attr('y', 2 * height / 5).text('Powered by segalaj.');
 
         /**
          * Call on event in order to zoom on called element.
