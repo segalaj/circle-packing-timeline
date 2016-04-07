@@ -21,7 +21,7 @@
  *     OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-d3.circlePackingTimeline = function (json, width, height, containerCss, color) {
+d3.circlePackingTimeline = function (json, width, height, containerSelector, color) {
     if (typeof(color) === 'undefined') {
         color = d3.scale.linear()
             .domain([-1, 5])
@@ -29,63 +29,53 @@ d3.circlePackingTimeline = function (json, width, height, containerCss, color) {
             .interpolate(d3.interpolateHcl);
     }
 
-    var scale = 1;
     var margin = 20;
-    var cmp = 0;
-
-    var pack = d3.layout.pack()
-        .size([width - margin, height - margin])
-        .value(function (d) {
-            return d.size || 1;
-        });
 
     d3.json("data.json", function (error, root) {
         if (error) {
             throw error;
         }
 
-        var dataScale = 0.3;
-        var focus = root;
-        var steps = pack.nodes(root).filter(function (d) {
-            return d.parent === root;
-        });
+        var focus = undefined;
+        var steps = root.children;
         var count = steps.length;
 
-        var container = d3.select(containerCss)
+        var container = d3.select(containerSelector)
             .on("click", reset)
             .append("svg")
             .attr("width", width - margin)
             .attr("height", height - margin)
             .append("g")
-            .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")scale(" + scale + ")");
+            .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")scale(1)");
 
         /**
          * Title
          */
-        container.append("text")
-            .attr("class", "title")
-            .attr("y", -height / 3)
-            .text(root.name);
+        container.append("text").attr("class", "title").attr("y", -height / 3).text(root.name);
 
         /**
          * Steps
          */
-        steps.forEach(function (step) {
+        steps.forEach(function (step, cmp) {
+            var pack = d3.layout.pack()
+                .size([width / count, height / count])
+                .value(function (d) {
+                    return d.size || 1;
+                });
             var dec = count % 2 == 0 ? cmp - count / 2 + 0.5 : cmp - Math.floor(count / 2);
+            var g = container.append("g");
+            var nodes = pack.nodes(step);
 
             /**
              * Arrow
              */
             if (cmp != 0) {
                 container.append("path")
-                    .attr("d", arrow(width / count * (dec - 1) + (root.r + 10) * dataScale, 0,
-                            width / count * dec - (root.r + 10) * dataScale, 0))
+                    .attr("d", arrow(width / count * (dec - 1) + step.r + margin, 0,
+                            width / count * dec - step.r - margin, 0))
                     .style("stroke", color(1))
                     .style("fill", "none");
             }
-
-            var g = container.append("g");
-            var nodes = pack.nodes(step);
 
             /**
              * Circles
@@ -97,36 +87,36 @@ d3.circlePackingTimeline = function (json, width, height, containerCss, color) {
                     return d.children ? "node" : "node node--leaf";
                 })
                 .attr("cx", function (d) {
-                    return (d.x - root.x) * dataScale + width / count * dec;
+                    return d.x - step.x + width / count * dec;
                 })
                 .attr("cy", function (d) {
-                    return (d.y - root.y) * dataScale;
+                    return d.y - step.y;
                 })
                 .attr("r", function (d) {
-                    return d.r * dataScale;
+                    return d.r;
                 })
                 .style("fill", function (d) {
                     return color(d.depth);
                 })
                 .on("click", zoomTo);
 
+            /**
+             * Texts
+             */
             var texts = g.selectAll(".label")
                 .data(nodes)
                 .enter().append("g")
                 .attr("class", "label")
                 .style("display", function (d) {
-                    return d.parent === root ? "inline" : "none";
+                    return d.parent === undefined ? "inline" : "none";
                 })
                 .attr("transform", function (d) {
                     return "translate("
-                        + ((d.x - root.x) * dataScale + width / count * dec) + ","
-                        + ((d.y - root.y) * dataScale) + ")";
+                        + (d.x - step.x + width / count * dec) + ","
+                        + (d.y - step.y) + ")";
                 });
 
-            /**
-             * Texts
-             */
-                // Title
+            // Title
             texts.append("text")
                 .attr("class", "subtitle")
                 .attr("y", function (d) {
@@ -167,21 +157,17 @@ d3.circlePackingTimeline = function (json, width, height, containerCss, color) {
                 .text(function (d) {
                     return d.start + " - " + d.end;
                 });
-
-            cmp++;
         });
 
         /**
          * Footer
          */
-        container.append("a")
-            .attr("xlink:href", root.url)
-            .attr("target", "_blank")
-            .attr("class", "footer")
-            .append("text")
-            .attr("y", 2 * height / 5)
-            .text("By me!");
+        container.append("a").attr("xlink:href", root.url).attr("target", "_blank").attr("class", "footer")
+            .append("text").attr("y", 2 * height / 5).text("By me!");
 
+        /**
+         * Call on event in order to zoom on called element.
+         */
         function zoomTo() {
             var element = d3.select(this);
             focus = element.datum();
@@ -189,29 +175,34 @@ d3.circlePackingTimeline = function (json, width, height, containerCss, color) {
             var dy = parseInt(element.attr("cy"));
             var r = parseInt(element.attr("r"));
 
-            zoom(dx, dy, 0.4 * height / r);
+            transform(dx, dy, 0.4 * height / r);
             d3.event.stopPropagation();
         }
 
+        /**
+         * Call on event in order to reset the container view.
+         */
         function reset() {
-            focus = root;
-            zoom(0, 0, 1);
+            focus = undefined;
+            transform(0, 0, 1);
             d3.event.stopPropagation();
         }
 
-        function zoom(x, y, s) {
-            scale = s;
+        /**
+         * Transform the container view center on (x,y) with a scale.
+         * @param x coordinate
+         * @param y coordinate
+         * @param scale
+         */
+        function transform(x, y, scale) {
             var translate = [width / 2 - scale * x, height / 2 - scale * y];
 
             container.transition()
                 .duration(750)
                 .attr("transform", "translate(" + translate + ")scale(" + scale + ")")
                 .selectAll(".label")
-                .filter(function (d) {
-                    return d.parent === focus || this.style.display === "inline";
-                })
                 .each("start", function (d) {
-                    if (d.parent !== focus) this.style.display = "none";
+                    if (d.parent !== focus || d.parent === undefined) this.style.display = "none";
                 })
                 .each("end", function (d) {
                     if (d.parent === focus) this.style.display = "inline";
@@ -220,6 +211,14 @@ d3.circlePackingTimeline = function (json, width, height, containerCss, color) {
                 .style("font-size", 15 / scale);
         }
 
+        /**
+         * Compute a SVG path drawing an arrow.
+         * @param x1 x start coordinate
+         * @param y1 y start coordinate
+         * @param x2 x end coordinate
+         * @param y2 y end coordinate
+         * @returns {string} SVG path
+         */
         function arrow(x1, y1, x2, y2) {
             return "M" + x1 + " " + (y1 + 2) + " " +
                 "L" + (x2 - 12) + " " + (y2 + 2) + " " +
