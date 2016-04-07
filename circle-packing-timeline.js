@@ -25,13 +25,13 @@ d3.circlePackingTimeline = function (json, width, height, containerSelector, col
     if (typeof(color) === 'undefined') {
         color = d3.scale.linear()
             .domain([-1, 5])
-            .range(["hsl(35, 100%, 62%)", "hsl(35, 64%, 34%)"])
+            .range(['hsl(35, 100%, 62%)', 'hsl(35, 64%, 34%)'])
             .interpolate(d3.interpolateHcl);
     }
 
     var margin = 20;
 
-    d3.json("data.json", function (error, root) {
+    d3.json(json, function (error, root) {
         if (error) {
             throw error;
         }
@@ -40,88 +40,84 @@ d3.circlePackingTimeline = function (json, width, height, containerSelector, col
         var steps = root.children;
         var count = steps.length;
 
-        var container = d3.select(containerSelector)
-            .on("click", reset)
-            .append("svg")
-            .attr("width", width - margin)
-            .attr("height", height - margin)
-            .append("g")
-            .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")scale(1)");
+        var container = d3.select(containerSelector).on('click', reset)
+            .append('svg').attr('width', width - margin).attr('height', height - margin)
+            .append('g').attr('transform', 'translate(' + width / 2 + ',' + height / 2 + ')scale(1)');
 
         /**
          * Title
          */
-        container.append("text").attr("class", "title").attr("y", -height / 3).text(root.name);
+        container.append('text').attr('class', 'title').attr('y', -height / 3).text(root.name);
 
         /**
          * Steps
          */
         steps.forEach(function (step, cmp) {
             var pack = d3.layout.pack()
-                .size([width / count, height / count])
-                .value(function (d) {
-                    return d.size || 1;
+                .size([width / count + margin, height / count + margin])
+                .value(function (item) {
+                    return item.size || 1;
                 });
             var dec = count % 2 == 0 ? cmp - count / 2 + 0.5 : cmp - Math.floor(count / 2);
-            var g = container.append("g");
-            var nodes = pack.nodes(step);
+            var stepItems = pack.nodes(step);
 
             /**
              * Arrow
              */
             if (cmp != 0) {
-                container.append("path")
-                    .attr("d", arrow(width / count * (dec - 1) + step.r + margin, 0,
+                container.append('path')
+                    .attr('d', arrow(width / count * (dec - 1) + step.r + margin, 0,
                             width / count * dec - step.r - margin, 0))
-                    .style("stroke", color(1))
-                    .style("fill", "none");
+                    .style('stroke', color(1))
+                    .style('fill', 'none');
             }
 
             /**
              * Circles
              */
-            var circle = g.selectAll("circle")
-                .data(nodes)
-                .enter().append("circle")
-                .attr("class", function (d) {
-                    return d.children ? "node" : "node node--leaf";
+            var stepContainer = container.append('g');
+            var circle = stepContainer.selectAll('circle')
+                .data(stepItems)
+                .enter().append('circle')
+                .attr('class', function (item) {
+                    return item.children ? 'item' : 'item item--leaf';
                 })
-                .attr("cx", function (d) {
-                    return d.x - step.x + width / count * dec;
+                .attr('cx', function (item) {
+                    return item.x - step.x + width / count * dec;
                 })
-                .attr("cy", function (d) {
-                    return d.y - step.y;
+                .attr('cy', function (item) {
+                    return item.y - step.y;
                 })
-                .attr("r", function (d) {
-                    return d.r;
+                .attr('r', function (item) {
+                    return item.r;
                 })
-                .style("fill", function (d) {
-                    return color(d.depth);
+                .style('fill', function (item) {
+                    return color(item.depth);
                 })
-                .on("click", zoomTo);
+                .on('click', zoomTo);
 
             /**
              * Texts
              */
-            var texts = g.selectAll(".label")
-                .data(nodes)
-                .enter().append("g")
-                .attr("class", "label")
-                .style("display", function (d) {
-                    return d.parent === undefined ? "inline" : "none";
+            var texts = stepContainer.selectAll('.label')
+                .data(stepItems)
+                .enter().append('g')
+                .attr('class', 'label')
+                .style('display', function (item) {
+                    return item.parent === undefined ? 'inline' : 'none';
                 })
-                .attr("transform", function (d) {
-                    return "translate("
-                        + (d.x - step.x + width / count * dec) + ","
-                        + (d.y - step.y) + ")";
+                .attr('transform', function (item) {
+                    return 'translate('
+                        + (item.x - step.x + width / count * dec) + ','
+                        + (item.y - step.y) + ')';
                 });
 
             // Title
-            texts.append("text")
-                .attr("class", "subtitle")
-                .attr("y", function (d) {
-                    if (d.desc) {
-                        if (d.start && d.end) {
+            texts.append('text')
+                .attr('class', 'subtitle')
+                .attr('y', function (item) {
+                    if (item.desc) {
+                        if (item.start && item.end) {
                             return -20;
                         } else {
                             return -5;
@@ -129,51 +125,51 @@ d3.circlePackingTimeline = function (json, width, height, containerSelector, col
                     }
                     return 0;
                 })
-                .text(function (d) {
-                    return d.name;
+                .text(function (item) {
+                    return item.name;
                 });
 
             // Description
-            texts.filter(function (d) {
-                return d.desc
+            texts.filter(function (item) {
+                return item.desc
             })
-                .append("text")
-                .attr("y", function (d) {
-                    if (d.start && d.end) {
+                .append('text')
+                .attr('y', function (item) {
+                    if (item.start && item.end) {
                         return 0;
                     }
                     return 5;
                 })
-                .text(function (d) {
-                    return d.desc;
+                .text(function (item) {
+                    return item.desc;
                 });
 
             // Date
-            texts.filter(function (d) {
-                return d.start && d.end
+            texts.filter(function (item) {
+                return item.start && item.end
             })
-                .append("text")
-                .attr("y", "20")
-                .text(function (d) {
-                    return d.start + " - " + d.end;
+                .append('text')
+                .attr('y', '20')
+                .text(function (item) {
+                    return item.start + ' - ' + item.end;
                 });
         });
 
         /**
          * Footer
          */
-        container.append("a").attr("xlink:href", root.url).attr("target", "_blank").attr("class", "footer")
-            .append("text").attr("y", 2 * height / 5).text("By me!");
+        container.append('a').attr('xlink:href', root.url).attr('target', '_blank').attr('class', 'footer')
+            .append('text').attr('y', 2 * height / 5).text('By me!');
 
         /**
          * Call on event in order to zoom on called element.
          */
         function zoomTo() {
-            var element = d3.select(this);
-            focus = element.datum();
-            var dx = parseInt(element.attr("cx"));
-            var dy = parseInt(element.attr("cy"));
-            var r = parseInt(element.attr("r"));
+            var item = d3.select(this);
+            focus = item.datum();
+            var dx = parseInt(item.attr('cx'));
+            var dy = parseInt(item.attr('cy'));
+            var r = parseInt(item.attr('r'));
 
             transform(dx, dy, 0.4 * height / r);
             d3.event.stopPropagation();
@@ -183,8 +179,10 @@ d3.circlePackingTimeline = function (json, width, height, containerSelector, col
          * Call on event in order to reset the container view.
          */
         function reset() {
-            focus = undefined;
-            transform(0, 0, 1);
+            if (focus !== undefined) {
+                focus = undefined;
+                transform(0, 0, 1);
+            }
             d3.event.stopPropagation();
         }
 
@@ -197,18 +195,21 @@ d3.circlePackingTimeline = function (json, width, height, containerSelector, col
         function transform(x, y, scale) {
             var translate = [width / 2 - scale * x, height / 2 - scale * y];
 
-            container.transition()
-                .duration(750)
-                .attr("transform", "translate(" + translate + ")scale(" + scale + ")")
-                .selectAll(".label")
-                .each("start", function (d) {
-                    if (d.parent !== focus || d.parent === undefined) this.style.display = "none";
+            container.transition().duration(750)
+                .attr('transform', 'translate(' + translate + ')scale(' + scale + ')')
+                .selectAll('.label')
+                .each('start', function (item) {
+                    if (item.parent !== focus || item.parent === undefined) {
+                        this.style.display = 'none';
+                    }
                 })
-                .each("end", function (d) {
-                    if (d.parent === focus) this.style.display = "inline";
+                .each('end', function (item) {
+                    if (item.parent === focus) {
+                        this.style.display = 'inline';
+                    }
                 })
-                .selectAll("text")
-                .style("font-size", 15 / scale);
+                .selectAll('text')
+                .style('font-size', 15 / scale);
         }
 
         /**
@@ -220,13 +221,13 @@ d3.circlePackingTimeline = function (json, width, height, containerSelector, col
          * @returns {string} SVG path
          */
         function arrow(x1, y1, x2, y2) {
-            return "M" + x1 + " " + (y1 + 2) + " " +
-                "L" + (x2 - 12) + " " + (y2 + 2) + " " +
-                "L" + (x2 - 16) + " " + (y2 + 16) + " " +
-                "L" + x2 + " " + y2 + " " +
-                "L" + (x2 - 16) + " " + (y2 - 16) + " " +
-                "L" + (x2 - 12) + " " + (y2 - 2) + " " +
-                "L" + x1 + " " + (y1 - 2) + " Z";
+            return 'M' + x1 + ' ' + (y1 + 2) + ' ' +
+                'L' + (x2 - 12) + ' ' + (y2 + 2) + ' ' +
+                'L' + (x2 - 16) + ' ' + (y2 + 16) + ' ' +
+                'L' + x2 + ' ' + y2 + ' ' +
+                'L' + (x2 - 16) + ' ' + (y2 - 16) + ' ' +
+                'L' + (x2 - 12) + ' ' + (y2 - 2) + ' ' +
+                'L' + x1 + ' ' + (y1 - 2) + ' Z';
         }
     });
 };
