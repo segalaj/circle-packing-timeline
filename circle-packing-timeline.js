@@ -210,7 +210,7 @@ d3.circlePackingTimeline = function (json, width, height, containerSelector, col
                     }
                 })
                 .selectAll('text')
-                .style('font-size', 15 / scale);
+                .style('font-size', (15 / scale) + 'px');
         }
 
         /**
