@@ -22,11 +22,22 @@
  * SOFTWARE.
  */
 import { json } from "d3-request";
-import { select } from "d3-selection";
+import { select, event } from "d3-selection";
 import { pack, hierarchy } from "d3-hierarchy";
+import { transition } from "d3-transition";
+import { interpolateHcl } from "d3-interpolate"
+import { scaleLinear } from "d3-scale";
 
 export default function() {
-  function circlePackingTimeline(input, width, height, containerSelector) {
+  function circlePackingTimeline(input, width, height, containerSelector, color) {
+
+    if (typeof(color) === 'undefined') {
+        color = scaleLinear()
+            .domain([-1, 5])
+            .range(['hsl(35, 100%, 62%)', 'hsl(35, 64%, 34%)'])
+            .interpolate(interpolateHcl);
+    }
+
     var margin = 20;
 
     json(input, function (error, data) {
@@ -36,8 +47,9 @@ export default function() {
 
       var parents = data.children;
       var count = parents.length;
+      var focus = null;
 
-      var container = select(containerSelector).on('click', function(){alert('reset')})
+      var container = select(containerSelector).on('click', reset)
             .append('svg').attr('width', width - margin).attr('height', height - margin)
             .append('g').attr('transform', 'translate(' + width / 2 + ',' + height / 2 + ')scale(1)');
 
@@ -51,31 +63,101 @@ export default function() {
        */
       parents.forEach(function(parent, cmp) {
         var dec = count % 2 == 0 ? cmp - count / 2 + 0.5 : cmp - Math.floor(count / 2);
-        var root = hierarchy(parent);
+        var root = hierarchy(parent)
+          .sum(function(d) { return d.size || 1; })
+          .sort(function(a, b) { return b.value - a.value; });
 
         var myPack = pack()
           .size([width / count + margin, height / count + margin]);
 
-        myPack(root
-          .sum(function(d) { return d.size || 1; })
-          .sort(function(a, b) { return b.size - a.size; })
-        );
+        var nodes = myPack(root).descendants();
 
-        var rootContainer = container.append('g')
-          .attr("transform", function() { return "translate(" + (width / count * dec - root.x) + "," + (-root.y) + ")"; });
-        var node = rootContainer.selectAll("g")
-          .data(root.descendants())
-          .enter().append("g")
-          .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; })
-          .attr("class", function(d) { return "node" + (!d.children ? " node--leaf" : d.depth ? "" : " node--root"); })
-          .each(function(d) { d.node = this; });
-
-        node.append("circle")
-          .attr("id", function(d) { return "node-" + d.id; })
+        /**
+         * Circles
+         */
+        var rootContainer = container.append('g');
+        rootContainer.selectAll("circle")
+          .data(nodes)
+          .enter().append("circle")
+          .attr("transform", function(d) { return "translate(" + (d.x - root.x + width / count * dec) + "," + (d.y - root.y) + ")"; })
+          .attr("class", function(d) { return d.parent ? d.children ? "node" : "node node--leaf" : "node node--root"; })
+          .each(function(d) { d.node = this; })
           .attr("r", function(d) { return d.r; })
-          .style("fill", function() { return '#' + Math.floor(Math.random()*16777215).toString(16); });
+          .style("fill", function(d) { return color(d.depth); })
+          .on("click", zoomTo);
+
+        /**
+         * Texts
+         */
+        var texts = rootContainer.selectAll(".label")
+          .data(nodes)
+          .enter().append("g")
+          .attr("transform", function(d) { return "translate(" + (d.x - root.x + width / count * dec) + "," + (d.y - root.y) + ")"; })
+          .attr('class', 'label')
+          .style('display', function (d) { return d.parent === null  ? "inline" : "none"; });
+
+        texts.append("text")
+          .attr('class', 'subtitle')
+          .attr("y", function(d) { return d.data.desc ? (d.data.start && d.data.end ?  -20 : -5) : 0 })
+          .text(function (d) { return d.data.name; });
+
+        texts.filter(function(d) { return d.data.desc; })
+          .append("text")
+          .attr("y", function(d) { return d.data.start && d.data.end ? 0 : 5; })
+          .text(function(d) { return d.data.desc; });
+
+        texts.filter(function(d) { return d.data.start && d.data.end; })
+          .append("text")
+          .attr("y", "20")
+          .text(function(d) { return d.data.start + " - " + d.data.end; });
        });
 
+       /**
+        * Footer
+        */
+        container.append('a').attr('xlink:href', 'http://fr.linkedin.com/in/joachimsegala/')
+          .attr('target', '_blank').attr('class', 'footer')
+          .append('text').attr('y', 2 * height / 5).text('By segalaj');
+
+      /**
+       * Call on event in order to zoom on called element.
+       */
+      function zoomTo(node) {
+        focus = node;
+        var dx = parseInt(node.node.transform.baseVal.getItem(0).matrix.e);
+        var dy = parseInt(node.node.transform.baseVal.getItem(0).matrix.f);
+        var r = parseInt(node.r);
+
+        transform(dx, dy, 0.4 * height / r);
+        event.stopPropagation();
+      }
+
+      /**
+       * Call on event in order to reset the container view.
+       */
+      function reset() {
+        if (focus !== null) {
+          focus = null;
+          transform(0, 0, 1);
+        }
+        event.stopPropagation();
+      }
+
+      /**
+       * Transform the container view center on (x,y) with a scale.
+       * @param x coordinate
+       * @param y coordinate
+       * @param scale
+       */
+      function transform(x, y, scale) {
+        var translate = [width / 2 - scale * x, height / 2 - scale * y];
+        container.transition(transition().duration(750))
+          .attr("transform", "translate(" + translate + ")scale(" + scale + ")")
+          .selectAll(".label")
+          .style('font-size', (15 / scale) + 'px')
+          .on("start", function (d) { return d.parent !== focus || d.parent === null ? this.style.display = "none" : undefined; })
+          .on("end", function (d) { return d.parent === focus ? this.style.display = "inline" : undefined; });
+      }
     });
   }
 
