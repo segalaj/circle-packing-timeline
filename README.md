@@ -1,8 +1,12 @@
-# circle-packing-timeline
+# circle-packing-timeline [![Build Status](https://travis-ci.org/segalaj/circle-packing-timeline.svg?branch=master)](https://travis-ci.org/segalaj/circle-packing-timeline)
+
 a d3.js plugin based on circle packing
 
 ## Demo
 [Live demo.](http://segalaj.ovh)
+
+## Installing
+If you use NPM, `npm install circle-packing-timeline`. Otherwise, clone the git repository and `npm install` in the root directory.
 
 ## How to use it
 
@@ -14,8 +18,8 @@ a d3.js plugin based on circle packing
     <meta charset="utf-8">
     <title>John Doe website</title>
     <link rel="stylesheet" href="css/style.css"/>
-    <script src="//d3js.org/d3.v3.min.js"></script>
-    <script src="circle-packing-timeline.js"></script>
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+    <script src="circle-packing-timeline.min.js"></script>
 </head>
 <body>
 <script>
@@ -27,7 +31,8 @@ a d3.js plugin based on circle packing
             || document.documentElement.clientHeight
             || document.body.clientHeight;
 
-    d3.circlePackingTimeline("data.json", width, height, "body");
+    var timeline = d3.circlePackingTimeline();
+    timeline("data.json", width, height, "body");
 </script>
 </body>
 </html>
@@ -102,5 +107,32 @@ a d3.js plugin based on circle packing
             ]
         }
     ]
+}
+```
+### style.css
+```css
+.title {
+    font-size: 25px;
+}
+
+.title,
+.footer,
+.label {
+    font: 15px "Helvetica Neue", Helvetica, Arial, sans-serif;
+    text-anchor: middle;
+}
+
+.node {
+  cursor: pointer;
+}
+
+.node:hover {
+  stroke: rgba(0, 0, 0, 0.67);
+  stroke-width: 1.5px;
+}
+
+.label,
+.node--leaf {
+  pointer-events: none;
 }
 ```

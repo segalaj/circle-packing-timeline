@@ -4,12 +4,14 @@
   "description": "d3.js plugin based on circle packing.",
   "keywords": [
     "d3",
-    "d3-module"
+    "d3-module",
+    "pack",
+    "timeline"
   ],
   "homepage": "https://github.com/segalaj/circle-packing-timeline",
   "license": "MIT",
   "author": {
-    "name": "Joachim Segala",
+    "name": "segalaj",
     "url": "http://segalaj.ovh/"
   },
   "main": "build/circle-packing-timeline.js",
@@ -22,7 +24,8 @@
   "scripts": {
     "pretest": "rm -rf build && mkdir build && rollup --banner \"$(preamble)\" -g d3-request:d3,d3-selection:d3,d3-hierarchy:d3,d3-transition:d3,d3-interpolate:d3,d3-scale:d3,d3-path:d3 -f umd -n d3 -o build/circle-packing-timeline.js -- index.js",
     "test": "tape 'test/**/*-test.js' && eslint index.js src",
-    "prepublish": "npm run test && uglifyjs --preamble \"$(preamble)\" build/circle-packing-timeline.js -c -m -o build/circle-packing-timeline.js"
+    "prepublish": "npm run test && uglifyjs --preamble \"$(preamble)\" build/circle-packing-timeline.js -c -m -o build/circle-packing-timeline.min.js",
+    "postpublish": "git push && git push --tags && zip -j build/circle-packing-timeline.zip -- LICENSE README.md build/circle-packing-timeline.js build/circle-packing-timeline.min.js"
   },
   "dependencies": {
     "d3-request": "^1.0.6",
@@ -35,12 +38,7 @@
   },
   "devDependencies": {
     "eslint": "^3.19.0",
-    "eslint-config-standard": "^10.2.1",
-    "eslint-plugin-import": "^2.7.0",
-    "eslint-plugin-node": "^5.1.1",
-    "eslint-plugin-promise": "^3.5.0",
-    "eslint-plugin-standard": "^3.0.1",
-    "package-preamble": "0.0",
+    "package-preamble": "0.1",
     "rollup": "0.41",
     "tape": "4",
     "uglify-js": "2"
