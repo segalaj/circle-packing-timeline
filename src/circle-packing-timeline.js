@@ -27,14 +27,15 @@ import { pack, hierarchy } from "d3-hierarchy";
 import { transition } from "d3-transition";
 import { interpolateHcl } from "d3-interpolate"
 import { scaleLinear } from "d3-scale";
+import { path } from "d3-path";
 
 export default function() {
   function circlePackingTimeline(input, width, height, containerSelector, color) {
 
-    if (typeof(color) === 'undefined') {
+    if (typeof(color) === "undefined") {
         color = scaleLinear()
             .domain([-1, 5])
-            .range(['hsl(35, 100%, 62%)', 'hsl(35, 64%, 34%)'])
+            .range(["hsl(35, 100%, 62%)", "hsl(35, 64%, 34%)"])
             .interpolate(interpolateHcl);
     }
 
@@ -49,14 +50,14 @@ export default function() {
       var count = parents.length;
       var focus = null;
 
-      var container = select(containerSelector).on('click', reset)
-            .append('svg').attr('width', width - margin).attr('height', height - margin)
-            .append('g').attr('transform', 'translate(' + width / 2 + ',' + height / 2 + ')scale(1)');
+      var container = select(containerSelector).on("click", reset)
+            .append("svg").attr("width", width - margin).attr("height", height - margin)
+            .append("g").attr("transform", "translate(" + width / 2 + "," + height / 2 + ")scale(1)");
 
       /**
        * Title
        */
-      container.append('text').attr('class', 'title').attr('y', -height / 3).text(data.name);
+      container.append("text").attr("class", "title").attr("y", -height / 3).text(data.name);
 
       /**
        * Steps
@@ -73,9 +74,20 @@ export default function() {
         var nodes = myPack(root).descendants();
 
         /**
+         * Arrows
+         */
+        if (cmp != 0) {
+          container.append("path")
+            .attr("d", arrow(width / count * (dec - 1) + root.r + margin, 0,
+            width / count * dec - root.r - margin, 0))
+            .style("stroke", color(1))
+            .style("fill", "none");
+        }
+
+        /**
          * Circles
          */
-        var rootContainer = container.append('g');
+        var rootContainer = container.append("g");
         rootContainer.selectAll("circle")
           .data(nodes)
           .enter().append("circle")
@@ -93,11 +105,11 @@ export default function() {
           .data(nodes)
           .enter().append("g")
           .attr("transform", function(d) { return "translate(" + (d.x - root.x + width / count * dec) + "," + (d.y - root.y) + ")"; })
-          .attr('class', 'label')
-          .style('display', function (d) { return d.parent === null  ? "inline" : "none"; });
+          .attr("class", "label")
+          .style("display", function (d) { return d.parent === null  ? "inline" : "none"; });
 
         texts.append("text")
-          .attr('class', 'subtitle')
+          .attr("class", "subtitle")
           .attr("y", function(d) { return d.data.desc ? (d.data.start && d.data.end ?  -20 : -5) : 0 })
           .text(function (d) { return d.data.name; });
 
@@ -115,9 +127,9 @@ export default function() {
        /**
         * Footer
         */
-        container.append('a').attr('xlink:href', 'http://fr.linkedin.com/in/joachimsegala/')
-          .attr('target', '_blank').attr('class', 'footer')
-          .append('text').attr('y', 2 * height / 5).text('By segalaj');
+        container.append("a").attr("xlink:href", "http://fr.linkedin.com/in/joachimsegala/")
+          .attr("target", "_blank").attr("class", "footer")
+          .append("text").attr("y", 2 * height / 5).text("By segalaj");
 
       /**
        * Call on event in order to zoom on called element.
@@ -154,9 +166,30 @@ export default function() {
         container.transition(transition().duration(750))
           .attr("transform", "translate(" + translate + ")scale(" + scale + ")")
           .selectAll(".label")
-          .style('font-size', (15 / scale) + 'px')
+          .style("font-size", (15 / scale) + "px")
           .on("start", function (d) { return d.parent !== focus || d.parent === null ? this.style.display = "none" : undefined; })
           .on("end", function (d) { return d.parent === focus ? this.style.display = "inline" : undefined; });
+      }
+
+      /**
+       * Compute a d3-path drawing an arrow.
+       * @param x1 x start coordinate
+       * @param y1 y start coordinate
+       * @param x2 x end coordinate
+       * @param y2 y end coordinate
+       * @returns {path} arrow path
+       */
+      function arrow(x1, y1, x2, y2) {
+        var arrowPath = path();
+        arrowPath.moveTo(x1, y1 + 2);
+        arrowPath.lineTo(x2 - 12, y2 + 2);
+        arrowPath.lineTo(x2 - 16, y2 + 16);
+        arrowPath.lineTo(x2, y2);
+        arrowPath.lineTo(x2 - 16, y2 - 16);
+        arrowPath.lineTo(x2 - 12, y2 - 2);
+        arrowPath.lineTo(x1, y1 - 2);
+        arrowPath.closePath();
+        return arrowPath;
       }
     });
   }

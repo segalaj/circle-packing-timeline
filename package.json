@@ -20,7 +20,7 @@
     "url": "https://github.com/segalaj/circle-packing-timeline.git"
   },
   "scripts": {
-    "pretest": "rm -rf build && mkdir build && rollup --banner \"$(preamble)\" -g d3-request:d3,d3-selection:d3,d3-hierarchy:d3,d3-transition:d3,d3-interpolate:d3,d3-scale:d3 -f umd -n d3 -o build/circle-packing-timeline.js -- index.js",
+    "pretest": "rm -rf build && mkdir build && rollup --banner \"$(preamble)\" -g d3-request:d3,d3-selection:d3,d3-hierarchy:d3,d3-transition:d3,d3-interpolate:d3,d3-scale:d3,d3-path:d3 -f umd -n d3 -o build/circle-packing-timeline.js -- index.js",
     "test": "tape 'test/**/*-test.js' && eslint index.js src",
     "prepublish": "npm run test && uglifyjs --preamble \"$(preamble)\" build/circle-packing-timeline.js -c -m -o build/circle-packing-timeline.js"
   },
@@ -30,7 +30,8 @@
     "d3-hierarchy": "^1.1.5",
     "d3-transition": "^1.1.0",
     "d3-interpolate": "^1.1.5",
-    "d3-scale": "^1.0.6"
+    "d3-scale": "^1.0.6",
+    "d3-path": "^1.0.5"
   },
   "devDependencies": {
     "eslint": "^3.19.0",
